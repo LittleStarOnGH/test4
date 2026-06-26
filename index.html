@@ -1,20 +1,29 @@
 <!DOCTYPE html>
 <html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3-Way Hologram & Digital Twin Master</title>
+    <title> UEA "Hologram" Project </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-aruco@0.1.0/src/svcl.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-aruco@0.1.0/src/aruco.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body class="bg-black text-white font-sans overflow-hidden m-0 h-screen w-screen selection:bg-transparent">
 
     <div id="mode-selection" class="absolute inset-0 z-50 flex flex-col justify-center items-center bg-slate-950 p-6 text-center">
+        
+        <div class="mb-4">
+            <img src="uea-logo.png" alt="University Logo" class="h-16 mx-auto mb-2 opacity-90">
+            <p class="text-xs text-indigo-400 font-mono tracking-widest"> SCHOOL OF EMP </p>
+        </div>
+
         <h1 class="text-2xl font-bold mb-2 text-indigo-400">📐 3-Way & Digital Twin</h1>
         <p class="text-xs text-slate-400 mb-8 max-w-xs">ระบบฉายแสง 3 ด้านสมมาตร ควบคุมผ่าน Touchpad หรือกล้องสแกนวัตถุจริง</p>
+        
         <div class="flex flex-col gap-4 w-full max-w-xs">
             <button onclick="initPeer('screen')" class="bg-indigo-600 hover:bg-indigo-500 py-4 rounded-2xl font-bold shadow-lg transition-all active:scale-95 text-sm">
                 📺 เปิดเป็นหน้าจอแสดงผล (สำหรับ iPad / Laptop)
@@ -28,6 +37,14 @@
                 📱 เปิดเป็นรีโมตควบคุม (สำหรับมือถือ)
             </button>
         </div>
+
+        <div class="mt-8 p-4 bg-slate-900 border border-slate-800 rounded-xl text-left max-w-xs">
+            <h4 class="text-xs font-bold text-indigo-400 mb-1">📝 ข้อมูลระบบเบื้องหลัง:</h4>
+            <p class="text-[10px] text-slate-400 leading-relaxed">
+                ขับเคลื่อนพิกัดด้วยสมองกล Python และส่งผ่านข้อมูลไร้สายความเร็วสูงด้วยเทคโนโลยี WebRTC เพื่อสร้างแบบจำลองฝาแฝดดิจิทัล (Digital Twin)
+            </p>
+        </div>
+
     </div>
 
     <div id="controller-setup" class="hidden absolute inset-0 z-50 flex flex-col justify-center items-center bg-slate-950 p-6 text-center">
@@ -131,7 +148,7 @@
         let currentMode = 'touch';
         let videoElement, canvasElement, canvasCtx, detector;
         let animationFrameId;
-        let pythonSocket; // ตัวแปรสำหรับท่อส่งข้อมูล Python
+        let pythonSocket; 
 
         const viewAngles = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
 
@@ -152,7 +169,6 @@
                 peer.on('open', id => document.getElementById('display-peer-id').innerText = id.replace("uea-twin-", ""));
                 peer.on('connection', connection => { conn = connection; setupReceiver(); });
                 
-                // สั่งเชื่อมต่อหา Python หลังบ้านทันทีถ้าอยู่เครื่องเดียวกัน
                 connectToPythonBackend();
             }
         }
@@ -170,7 +186,6 @@
                     setupTouchpad();
                     initTrackingSystem(); 
                     
-                    // สั่งเชื่อมต่อหา Python หลังบ้านจากฝั่ง Controller ด้วย
                     connectToPythonBackend();
                 });
             });
@@ -184,7 +199,7 @@
                     const currentColor = currentMeshes[0] && currentMeshes[0].material.color ? currentMeshes[0].material.color.getHexString() : "ffd700";
                     recreateAllGeometries(data.value, currentColor);
                 } else if (data.type === 'color') {
-                    currentMeshes.forEach(mesh => { if(mesh.material.color) mesh.material.color.set(data.value); });
+                    currentMeshes.forEach(mesh => { if(mesh.material && mesh.material.color) mesh.material.color.set(data.value); });
                 } else if (data.type === 'scale') {
                     baseScale = data.value / 100;
                     currentMeshes.forEach(mesh => mesh.scale.set(baseScale, baseScale, baseScale));
@@ -205,7 +220,6 @@
             });
         }
 
-        // ฟังก์ชันส่วนกลางสำหรับการขยับโมเดล 3 ด้าน
         function applyTwinRotation(value) {
             currentMeshes.forEach((mesh, idx) => {
                 mesh.rotation.y = viewAngles[idx] + value.y;
@@ -214,7 +228,6 @@
             });
         }
 
-        // 🔌 ฟังก์ชันเชื่อมต่อไปยัง Python Server (twin.py พอร์ต 8080)
         function connectToPythonBackend() {
             console.log("⚡ กำลังเชื่อมต่อเข้าหาเครื่องยนต์ Python Backend...");
             pythonSocket = new WebSocket('ws://127.0.0.1:8080');
@@ -228,19 +241,16 @@
                 const data = JSON.parse(event.data);
                 if (data.type === 'twin_rotate') {
                     if (myRole === 'screen') {
-                        // ถ้าเครื่องนี้คือจอแสดงผลหลัก ให้หมุนโมเดล 3 มิติตามตรงๆ เลย
                         applyTwinRotation(data.value);
                     } else if (myRole === 'controller') {
-                        // ถ้าเครื่องนี้เป็นรีโมตคอนโทรล ให้ยิงส่งพิกัดข้ามอากาศไปให้หน้าจอหลักผ่าน PeerJS
                         sendAction('twin_rotate', data.value);
                     }
                 }
             };
 
             pythonSocket.onclose = () => {
-                console.log("❌ ท่อสัญญาณ Python ปิดอยู่ (ลองเปิดรันไฟล์ twin.py ค้างไว้)");
+                console.log("❌ ท่อสัญญาณ Python ปิดอยู่");
                 updatePythonStatusUI(false);
-                // พยายาม Reconnect อัตโนมัติทุกๆ 4 วินาที
                 setTimeout(connectToPythonBackend, 4000);
             };
 
@@ -250,7 +260,6 @@
             };
         }
 
-        // ฟังก์ชันอัปเดตตัวหนังสือสถานะบนหน้าจอ
         function updatePythonStatusUI(isConnected) {
             const screenStatus = document.getElementById('screen-python-status');
             const ctrlStatus = document.getElementById('ctrl-python-status');
@@ -284,7 +293,6 @@
             }
         }
 
-        // --- ระบบกล้องเดิมคงไว้ทั้งหมด ---
         function initTrackingSystem() {
             videoElement = document.getElementById('webcam-video');
             canvasElement = document.getElementById('tracker-canvas');
@@ -294,7 +302,6 @@
 
         function startCameraStream() {
             const constraints = { video: { facingMode: { ideal: "environment" } } };
-            
             navigator.mediaDevices.getUserMedia(constraints)
                 .then(stream => {
                     videoElement.srcObject = stream;
@@ -324,7 +331,6 @@
                 canvasElement.width = videoElement.videoWidth;
                 canvasElement.height = videoElement.videoHeight;
                 canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-                
                 const imageData = canvasCtx.getImageData(0, 0, canvasElement.width, canvasElement.height);
                 const markers = detector.detect(imageData);
                 
@@ -352,7 +358,6 @@
             if (currentMode === 'twin') animationFrameId = requestAnimationFrame(processWebcamFrame);
         }
 
-        // --- ระบบ 3D มัลติวิวคงไว้ทั้งหมด ---
         function init3DMultiView() {
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -376,28 +381,56 @@
             animate();
         }
 
+        // 🔗 จุดที่ 2: ฟังก์ชันสำหรับโหลดและแยกร่างไฟล์ 3D จริงส่งไปยัง 3 ด้านโฮโลแกรม
         function recreateAllGeometries(type, colorHex) {
             for (let i = 0; i < 3; i++) { if (currentMeshes[i]) scenes[i].remove(currentMeshes[i]); }
             currentMeshes = [];
-            let geometry;
-            if (type === 'custom_artifact') geometry = new THREE.TorusGeometry(0.7, 0.35, 12, 18);
-            else if (type === 'torus') geometry = new THREE.TorusKnotGeometry(0.8, 0.28, 100, 16);
-            else if (type === 'crystal') geometry = new THREE.IcosahedronGeometry(1.1, 0);
-            else if (type === 'cone') geometry = new THREE.ConeGeometry(0.9, 1.8, 32);
 
-            const material = new THREE.MeshStandardMaterial({
-                color: new THREE.Color("#" + colorHex),
-                metalness: 0.9, roughness: 0.15,
-                flatShading: type === 'custom_artifact' || type === 'crystal'
-            });
+            // ⚠️ เงื่อนไขตรวจจับ: ถ้ากดเลือกโหมด "⚙️ เฟือง 3D" (custom_artifact) ให้ดึงไฟล์โมเดลจริงมาทำงานแทนคณิตศาสตร์เรขาคณิตคณิตศาสตร์
+            if (type === 'custom_artifact') {
+                const loader = new THREE.GLTFLoader();
+                
+                // บังคับเปิดไฟล์โมเดล (กรุณาแก้ไขชื่อไฟล์ 'Sohn_DoorLock_100463952.gltf' ให้ตรงกับที่คุณเซฟไว้จริง)
+                loader.load('Sohn_DoorLock_100463952.gltf', function (gltf) {
+                    for (let i = 0; i < 3; i++) {
+                        const modelClone = gltf.scene.clone(); // แยกร่างวัตถุเป็น 3 ด้าน
+                        modelClone.rotation.y = viewAngles[i];
+                        modelClone.scale.set(baseScale, baseScale, baseScale);
+                        
+                        // บังคับเปลี่ยนสีตามปุ่มกดบนรีโมตมือถือ
+                        modelClone.traverse((child) => {
+                            if (child.isMesh && child.material) {
+                                child.material.color.set("#" + colorHex);
+                            }
+                        });
 
-            for (let i = 0; i < 3; i++) {
-                const mesh = new THREE.Mesh(geometry, material.clone());
-                mesh.rotation.y = viewAngles[i];
-                if (type === 'custom_artifact') mesh.rotation.x = 0.5;
-                mesh.scale.set(baseScale, baseScale, baseScale);
-                scenes[i].add(mesh);
-                currentMeshes.push(mesh);
+                        scenes[i].add(modelClone);
+                        currentMeshes.push(modelClone);
+                    }
+                }, undefined, function (error) {
+                    console.error('ไม่สามารถดึงไฟล์โมเดลขึ้นมาแสดงผลได้:', error);
+                });
+
+            } else {
+                // ท่อนสลับกลับไปใช้รูปทรงเรขาคณิตคณิตศาสตร์แบบปกติ
+                let geometry;
+                if (type === 'torus') geometry = new THREE.TorusKnotGeometry(0.8, 0.28, 100, 16);
+                else if (type === 'crystal') geometry = new THREE.IcosahedronGeometry(1.1, 0);
+                else if (type === 'cone') geometry = new THREE.ConeGeometry(0.9, 1.8, 32);
+
+                const material = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color("#" + colorHex),
+                    metalness: 0.9, roughness: 0.15,
+                    flatShading: type === 'crystal'
+                });
+
+                for (let i = 0; i < 3; i++) {
+                    const mesh = new THREE.Mesh(geometry, material.clone());
+                    mesh.rotation.y = viewAngles[i];
+                    mesh.scale.set(baseScale, baseScale, baseScale);
+                    scenes[i].add(mesh);
+                    currentMeshes.push(mesh);
+                }
             }
         }
 
