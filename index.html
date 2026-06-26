@@ -20,7 +20,7 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 1px solid #1f293d;
         }
         h2 { color: #8b5cf6; margin: 0 0 5px 0; font-size: 20px; text-align: center; }
-        .status { color: #4ade80; font-size: 13px; text-align: center; margin-bottom: 15px; font-weight: bold; }
+        .status { color: #94a3b8; font-size: 13px; text-align: center; margin-bottom: 15px; font-weight: bold; }
         
         /* 3D Canvas Box */
         #canvas-container {
@@ -53,11 +53,11 @@
 
 <div class="container">
     <h2>🎛️ Premium Hybrid Control</h2>
-    <div class="status" id="status-text">🔴 ดิจิทัลทวิน: รอการเชื่อมต่อ</div>
+    <div class="status" id="status-text">🔴 สแตนด์บาย - รอการเชื่อมต่อ Python</div>
     
     <div id="canvas-container"></div>
     
-    <button class="btn-connect" id="connect-btn">🔌 เชื่อมต่อสมองกล (Digital Twin)</button>
+    <button class="btn-connect" id="connect-btn">🔌 เชื่อมต่อสมองกล Digital Twin</button>
 
     <div class="section-title">เลือกวัตถุ 3D</div>
     <div class="row">
@@ -74,7 +74,7 @@
         <div class="color-dot" style="background: #f43f5e;" onclick="changeColor(0xf43f5e, this)"></div>
         <div class="color-dot active" style="background: #34d399;" onclick="changeColor(0x34d399, this)"></div>
         <div class="color-dot" style="background: #e879f9;" onclick="changeColor(0xe879f9, this)"></div>
-        <div class="color-dot" style="background: #ff781f;" onclick="changeColor(0xff781f, this)"></div>
+        <div class="color-dot" style="background: #ffffff;" onclick="changeColor(0xffffff, this)"></div>
     </div>
 
     <div class="slider-group">
@@ -93,15 +93,17 @@
     const statusText = document.getElementById('status-text');
     const connectBtn = document.getElementById('connect-btn');
     
-    // --- ระบบวาดภาพ 3D (Three.js) ---
+    // ----------------------------------------------------
+    // 1. ระบบวาดภาพ 3D (Three.js)
+    // ----------------------------------------------------
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
 
-    // แสงสว่าง
+    // ใส่แสงสว่าง
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const dirLight = new THREE.DirectionLight(0xffffff, 0.8);
     dirLight.position.set(5, 10, 7);
@@ -109,26 +111,35 @@
     camera.position.z = 6;
 
     let currentMesh;
-    let currentGeoColor = 0x34d399;
+    let currentGeoColor = 0x34d399; // สีเขียวตั้งต้น
 
+    // ฟังก์ชันสร้างรูปทรง 3D
     function createMesh(type) {
         if(currentMesh) scene.remove(currentMesh);
         let geo;
-        if(type === 'ring') geo = new THREE.TorusGeometry(1.2, 0.4, 12, 48);
+        if(type === 'ring') geo = new THREE.TorusGeometry(1.2, 0.4, 16, 48);
         else if(type === 'crystal') geo = new THREE.OctahedronGeometry(1.5, 0);
-        else if(type === 'cone') geo = new THREE.ConeGeometry(1.2, 2.2, 4);
-        else geo = new THREE.CylinderGeometry(1.8, 1.8, 0.6, 16); // Gear จำลอง
+        else if(type === 'cone') geo = new THREE.ConeGeometry(1.2, 2.2, 32);
+        else geo = new THREE.TorusKnotGeometry(0.8, 0.3, 64, 16); // ใช้ TorusKnot แทนเฟืองให้ดูเท่ขึ้น
 
-        const mat = new THREE.MeshStandardMaterial({ color: currentGeoColor, roughness: 0.3 });
+        const mat = new THREE.MeshStandardMaterial({ color: currentGeoColor, roughness: 0.2, metalness: 0.5 });
         currentMesh = new THREE.Mesh(geo, mat);
         scene.add(currentMesh);
     }
-    createMesh('gear'); // เริ่มต้นด้วยเฟือง
+    
+    // เริ่มต้นแสดงผลเป็นทรงเฟือง (TorusKnot)
+    createMesh('gear');
 
-    function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
+    // สั่งวาดลูปซ้ำๆ
+    function animate() { 
+        requestAnimationFrame(animate); 
+        renderer.render(scene, camera); 
+    }
     animate();
 
-    // --- ฟังก์ชันปุ่มกดควบคุมบนหน้าเว็บ ---
+    // ----------------------------------------------------
+    // 2. ฟังก์ชันปุ่มกดควบคุม (UI Controls)
+    // ----------------------------------------------------
     function changeShape(type) {
         createMesh(type);
         document.querySelectorAll('.btn-opt').forEach(b => b.classList.remove('active'));
@@ -149,39 +160,47 @@
 
     function updateOffset(val) {
         document.getElementById('offset-val').innerText = val + 'px';
-        if(currentMesh) camera.position.z = (val / 130) * 6; // เลื่อนกล้องแทนการเลื่อนวัตถุ
+        camera.position.z = (130 / val) * 6; // ปรับระยะกล้อง
     }
 
-    // --- 🔑 สูตรลับการเชื่อมต่อข้ามโลกจาก GitHub Pages ไปหา Python ในคอม ---
+    // ----------------------------------------------------
+    // 3. ระบบเชื่อมต่อ WebSocket (รับค่าจาก Python)
+    // ----------------------------------------------------
     connectBtn.addEventListener('click', () => {
         statusText.innerText = "⏳ กำลังเชื่อมต่อไร้สาย...";
         statusText.style.color = "#fbbf24";
         
-        // ⚠️ บังคับวิ่งเข้าหา IP ส่วนตัวของเครื่องคุณพอร์ต 8080 
-        // หน้าเว็บ HTTPS จะยอมคุยกับ localhost ผ่านพอร์ตตรงได้หากตั้งค่าถูกต้อง
+        // ชี้เป้าไปที่ Python ในเครื่อง (พอร์ต 8080)
         socket = new WebSocket('ws://127.0.0.1:8080');
 
         socket.onopen = () => {
-            statusText.innerText = "🟢 เชื่อมต่อสมองกลสำเร็จ! เฟืองขยับตามมือได้เลย";
+            statusText.innerText = "🟢 เชื่อมต่อสมองกลสำเร็จ! วัตถุขยับตามมือได้เลย";
             statusText.style.color = "#4ade80";
             connectBtn.classList.add('connected');
             connectBtn.innerText = "⚡ ระบบตรวจจับตำแหน่งทำงานอยู่";
         };
 
         socket.onmessage = (event) => {
+            // แกะข้อมูล JSON ที่ Python ส่งมา
             const data = JSON.parse(event.data);
             if (data.type === "twin_rotate" && currentMesh) {
-                // ขยับหมุนวัตถุตามพิกัด 3D ที่ส่งมาจาก Python
+                // ขยับหมุนวัตถุตามพิกัด 3D ที่คำนวณจากกล้อง
                 currentMesh.rotation.x = data.value.x * (Math.PI / 180);
                 currentMesh.rotation.y = data.value.y * (Math.PI / 180);
             }
         };
 
         socket.onclose = () => {
-            statusText.innerText = "🔴 การเชื่อมต่อตัดขาด (กรุณารัน Python ค้างไว้)";
+            statusText.innerText = "🔴 การเชื่อมต่อตัดขาด (โปรดรัน Python ค้างไว้)";
             statusText.style.color = "#f87171";
             connectBtn.classList.remove('connected');
             connectBtn.innerText = "🔌 เชื่อมต่อสมองกล (Digital Twin)";
+        };
+        
+        socket.onerror = (error) => {
+            console.error("WebSocket Error: ", error);
+            statusText.innerText = "⚠️ เชื่อมต่อไม่ได้ (อาจติด Block ใน Chrome หรือยังไม่รัน Python)";
+            statusText.style.color = "#f87171";
         };
     });
 </script>
