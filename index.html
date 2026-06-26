@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3-Way Hologram & Digital Twin Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chula:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0b0f19;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .container {
+            width: 90%;
+            max-width: 500px;
+            background: #121826;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            text-align: center;
+            border: 1px solid #1f293d;
+        }
+        h2 { color: #8b5cf6; margin-top: 0; font-size: 22px; }
+        .status-box {
+            background: #1e1b4b;
+            color: #4ade80;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 300px;
+            background: #020617;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px dashed #334155;
+            position: relative;
+        }
+        .btn {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            width: 100%;
+        }
+        .btn:hover { background: #4338ca; }
+        .info { color: #94a3b8; font-size: 12px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>⚙️ Premium Hybrid Control</h2>
+    <div class="status-box" id="status">🔴 ดนสแตนด์บาย - รอการเชื่อมต่อ</div>
+    
+    <div id="canvas-container"></div>
+    
+    <button class="btn" id="connect-btn">🔌 เชื่อมต่อสมองกล Digital Twin</button>
+    <p class="info">💡 ระบบจะขยับเฟือง 3D อัตโนมัติเมื่อได้รับพิกัดมุมจากกล้อง Python</p>
+</div>
+
+<script>
+    let socket;
+    const statusDiv = document.getElementById('status');
+    const connectBtn = document.getElementById('connect-btn');
+    
+    // --- เริ่มต้นระบบวาดภาพ 3D (Three.js) ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    // สร้างโมเดลเฟืองจำลอง (ใช้ทรงกระบอกฟันเฟืองบวกทรงกลม)
+    const geometry = new THREE.CylinderGeometry(2, 2, 0.8, 16);
+    const material = new THREE.MeshStandardMaterial({ color: 0x10b981, wireframe: false, roughness: 0.3 });
+    const gearMesh = new THREE.Mesh(geometry, material);
+    scene.add(gearMesh);
+
+    // ใส่แสงสว่างให้โมเดลสวยงาม
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionLight(0xffffff, 0.8);
+    dirLight.position.set(5, 10, 7);
+    scene.add(dirLight);
+    camera.position.z = 6;
+
+    // ฟังก์ชันวาดภาพซ้ำๆ
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // --- ระบบเชื่อมต่อสื่อสารไร้สาย WebSocket ---
+    connectBtn.addEventListener('click', () => {
+        statusDiv.innerText = "⏳ กำลังเจาะท่อสัญญาณ...";
+        statusDiv.style.color = "#fbbf24";
+        
+        // 🔗 ชี้เป้าเชื่อมตรงไปที่ Python ในโน้ตบุ๊ก (พอร์ต 8080)
+        socket = new WebSocket('ws://127.0.0.1:8080');
+
+        socket.onopen = () => {
+            statusDiv.innerText = "🟢 เชื่อมต่อกับ Python สำเร็จ! พร้อมตรวจจับมือ";
+            statusDiv.style.color = "#4ade80";
+            connectBtn.style.background = "#059669";
+            connectBtn.innerText = "⚡ ระบบ Digital Twin กำลังทำงาน";
+        };
+
+        socket.onmessage = (event) => {
+            // แกะกล่องพิกัดที่ Python ส่งมาให้ 30 ครั้งต่อวินาที
+            const data = JSON.parse(event.data);
+            
+            if (data.type === "twin_rotate") {
+                // ดึงค่าองศาจาก Python ข้ามฝั่งมา
+                const angleX = data.value.x;
+                const angleY = data.value.y;
+                
+                // ⚙️ สั่งขยับโมเดล 3D บนหน้าจอตามมือคุณทันที! (แปลงองศาเป็น Radian)
+                gearMesh.rotation.x = angleX * (Math.PI / 180);
+                gearMesh.rotation.y = angleY * (Math.PI / 180);
+            }
+        };
+
+        socket.onclose = () => {
+            statusDiv.innerText = "🔴 การเชื่อมต่อตัดขาด (Python ปิดอยู่)";
+            statusDiv.style.color = "#f87171";
+            connectBtn.style.background = "#4f46e5";
+            connectBtn.innerText = "🔌 เชื่อมต่อสมองกล Digital Twin";
+        };
+    });
+
+    // ปรับขนาดหน้าจอ 3D ตามหน้าต่างอัตโนมัติ
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+</script>
+
+</body>
+</html>
