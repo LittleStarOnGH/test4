@@ -3,87 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3-Way Hologram & Digital Twin Control</title>
-    <link href="https://fonts.googleapis.com/css2?family=Chula:wght@400;700&display=swap" rel="stylesheet">
+    <title>Premium Hybrid Control - Digital Twin</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            background-color: #0b0f19;
-            color: #ffffff;
+            margin: 0; padding: 0;
+            background-color: #0b0f19; color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow-x: hidden;
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; padding-bottom: 30px;
         }
         .container {
-            width: 90%;
-            max-width: 500px;
-            background: #121826;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            text-align: center;
-            border: 1px solid #1f293d;
+            width: 90%; max-width: 480px;
+            background: #121826; border-radius: 16px;
+            padding: 20px; margin-top: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 1px solid #1f293d;
         }
-        h2 { color: #8b5cf6; margin-top: 0; font-size: 22px; }
-        .status-box {
-            background: #1e1b4b;
-            color: #4ade80;
-            padding: 8px 16px;
-            border-radius: 20px;
-            display: inline-block;
-            font-size: 14px;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
+        h2 { color: #8b5cf6; margin: 0 0 5px 0; font-size: 20px; text-align: center; }
+        .status { color: #4ade80; font-size: 13px; text-align: center; margin-bottom: 15px; font-weight: bold; }
+        
+        /* 3D Canvas Box */
         #canvas-container {
-            width: 100%;
-            height: 300px;
-            background: #020617;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px dashed #334155;
-            position: relative;
+            width: 100%; height: 280px;
+            background: #020617; border-radius: 12px;
+            margin-bottom: 15px; border: 1px solid #1e293b;
         }
-        .btn {
-            background: #4f46e5;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-            width: 100%;
-        }
-        .btn:hover { background: #4338ca; }
-        .info { color: #94a3b8; font-size: 12px; margin-top: 15px; }
+
+        /* Control UI */
+        .section-title { font-size: 12px; color: #94a3b8; text-align: left; margin: 10px 0 5px 0; text-transform: uppercase; }
+        .row { display: flex; gap: 8px; margin-bottom: 12px; }
+        .btn-opt { flex: 1; background: #1e293b; border: 1px solid #334155; color: white; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .btn-opt.active { background: #059669; border-color: #34d399; }
+        
+        /* Colors */
+        .color-picker { display: flex; justify-content: space-between; margin-bottom: 15px; background: #1e293b; padding: 8px; border-radius: 8px; }
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+        .color-dot.active { border-color: white; transform: scale(1.1); }
+
+        /* Sliders */
+        .slider-group { background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: left; }
+        .slider-label { display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e1; margin-bottom: 5px; }
+        .slider { width: 100%; cursor: pointer; accent-color: #6366f1; }
+
+        .btn-connect { background: #4f46e5; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; }
+        .btn-connect.connected { background: #059669; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>⚙️ Premium Hybrid Control</h2>
-    <div class="status-box" id="status">🔴 ดนสแตนด์บาย - รอการเชื่อมต่อ</div>
+    <h2>🎛️ Premium Hybrid Control</h2>
+    <div class="status" id="status-text">🔴 ดิจิทัลทวิน: รอการเชื่อมต่อ</div>
     
     <div id="canvas-container"></div>
     
-    <button class="btn" id="connect-btn">🔌 เชื่อมต่อสมองกล Digital Twin</button>
-    <p class="info">💡 ระบบจะขยับเฟือง 3D อัตโนมัติเมื่อได้รับพิกัดมุมจากกล้อง Python</p>
+    <button class="btn-connect" id="connect-btn">🔌 เชื่อมต่อสมองกล (Digital Twin)</button>
+
+    <div class="section-title">เลือกวัตถุ 3D</div>
+    <div class="row">
+        <button class="btn-opt" onclick="changeShape('ring')">วงแหวน</button>
+        <button class="btn-opt" onclick="changeShape('crystal')">คริสตัล</button>
+        <button class="btn-opt" onclick="changeShape('cone')">ทรงกรวย</button>
+        <button class="btn-opt active" id="default-shape" onclick="changeShape('gear')">เฟือง 3D</button>
+    </div>
+
+    <div class="section-title">เปลี่ยนสีวัตถุ</div>
+    <div class="color-picker">
+        <div class="color-dot" style="background: #fbbf24;" onclick="changeColor(0xfbbf24, this)"></div>
+        <div class="color-dot" style="background: #22d3ee;" onclick="changeColor(0x22d3ee, this)"></div>
+        <div class="color-dot" style="background: #f43f5e;" onclick="changeColor(0xf43f5e, this)"></div>
+        <div class="color-dot active" style="background: #34d399;" onclick="changeColor(0x34d399, this)"></div>
+        <div class="color-dot" style="background: #e879f9;" onclick="changeColor(0xe879f9, this)"></div>
+        <div class="color-dot" style="background: #ff781f;" onclick="changeColor(0xff781f, this)"></div>
+    </div>
+
+    <div class="slider-group">
+        <div class="slider-label"><span>ขนาดสเกลภาพ (Scale)</span><span id="scale-val">100%</span></div>
+        <input type="range" class="slider" min="50" max="200" value="100" oninput="updateScale(this.value)">
+    </div>
+
+    <div class="slider-group">
+        <div class="slider-label"><span>ระยะวิ่งเข้าออกศูนย์กลาง (Offset)</span><span id="offset-val">130px</span></div>
+        <input type="range" class="slider" min="50" max="300" value="130" oninput="updateOffset(this.value)">
+    </div>
 </div>
 
 <script>
     let socket;
-    const statusDiv = document.getElementById('status');
+    const statusText = document.getElementById('status-text');
     const connectBtn = document.getElementById('connect-btn');
     
-    // --- เริ่มต้นระบบวาดภาพ 3D (Three.js) ---
+    // --- ระบบวาดภาพ 3D (Three.js) ---
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
@@ -91,72 +101,89 @@
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
 
-    // สร้างโมเดลเฟืองจำลอง (ใช้ทรงกระบอกฟันเฟืองบวกทรงกลม)
-    const geometry = new THREE.CylinderGeometry(2, 2, 0.8, 16);
-    const material = new THREE.MeshStandardMaterial({ color: 0x10b981, wireframe: false, roughness: 0.3 });
-    const gearMesh = new THREE.Mesh(geometry, material);
-    scene.add(gearMesh);
-
-    // ใส่แสงสว่างให้โมเดลสวยงาม
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
+    // แสงสว่าง
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const dirLight = new THREE.DirectionLight(0xffffff, 0.8);
     dirLight.position.set(5, 10, 7);
     scene.add(dirLight);
     camera.position.z = 6;
 
-    // ฟังก์ชันวาดภาพซ้ำๆ
-    function animate() {
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
+    let currentMesh;
+    let currentGeoColor = 0x34d399;
+
+    function createMesh(type) {
+        if(currentMesh) scene.remove(currentMesh);
+        let geo;
+        if(type === 'ring') geo = new THREE.TorusGeometry(1.2, 0.4, 12, 48);
+        else if(type === 'crystal') geo = new THREE.OctahedronGeometry(1.5, 0);
+        else if(type === 'cone') geo = new THREE.ConeGeometry(1.2, 2.2, 4);
+        else geo = new THREE.CylinderGeometry(1.8, 1.8, 0.6, 16); // Gear จำลอง
+
+        const mat = new THREE.MeshStandardMaterial({ color: currentGeoColor, roughness: 0.3 });
+        currentMesh = new THREE.Mesh(geo, mat);
+        scene.add(currentMesh);
     }
+    createMesh('gear'); // เริ่มต้นด้วยเฟือง
+
+    function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
     animate();
 
-    // --- ระบบเชื่อมต่อสื่อสารไร้สาย WebSocket ---
+    // --- ฟังก์ชันปุ่มกดควบคุมบนหน้าเว็บ ---
+    function changeShape(type) {
+        createMesh(type);
+        document.querySelectorAll('.btn-opt').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    function changeColor(hex, element) {
+        currentGeoColor = hex;
+        if(currentMesh) currentMesh.material.color.setHex(hex);
+        document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+        element.classList.add('active');
+    }
+
+    function updateScale(val) {
+        document.getElementById('scale-val').innerText = val + '%';
+        if(currentMesh) currentMesh.scale.set(val/100, val/100, val/100);
+    }
+
+    function updateOffset(val) {
+        document.getElementById('offset-val').innerText = val + 'px';
+        if(currentMesh) camera.position.z = (val / 130) * 6; // เลื่อนกล้องแทนการเลื่อนวัตถุ
+    }
+
+    // --- 🔑 สูตรลับการเชื่อมต่อข้ามโลกจาก GitHub Pages ไปหา Python ในคอม ---
     connectBtn.addEventListener('click', () => {
-        statusDiv.innerText = "⏳ กำลังเจาะท่อสัญญาณ...";
-        statusDiv.style.color = "#fbbf24";
+        statusText.innerText = "⏳ กำลังเชื่อมต่อไร้สาย...";
+        statusText.style.color = "#fbbf24";
         
-        // 🔗 ชี้เป้าเชื่อมตรงไปที่ Python ในโน้ตบุ๊ก (พอร์ต 8080)
+        // ⚠️ บังคับวิ่งเข้าหา IP ส่วนตัวของเครื่องคุณพอร์ต 8080 
+        // หน้าเว็บ HTTPS จะยอมคุยกับ localhost ผ่านพอร์ตตรงได้หากตั้งค่าถูกต้อง
         socket = new WebSocket('ws://127.0.0.1:8080');
 
         socket.onopen = () => {
-            statusDiv.innerText = "🟢 เชื่อมต่อกับ Python สำเร็จ! พร้อมตรวจจับมือ";
-            statusDiv.style.color = "#4ade80";
-            connectBtn.style.background = "#059669";
-            connectBtn.innerText = "⚡ ระบบ Digital Twin กำลังทำงาน";
+            statusText.innerText = "🟢 เชื่อมต่อสมองกลสำเร็จ! เฟืองขยับตามมือได้เลย";
+            statusText.style.color = "#4ade80";
+            connectBtn.classList.add('connected');
+            connectBtn.innerText = "⚡ ระบบตรวจจับตำแหน่งทำงานอยู่";
         };
 
         socket.onmessage = (event) => {
-            // แกะกล่องพิกัดที่ Python ส่งมาให้ 30 ครั้งต่อวินาที
             const data = JSON.parse(event.data);
-            
-            if (data.type === "twin_rotate") {
-                // ดึงค่าองศาจาก Python ข้ามฝั่งมา
-                const angleX = data.value.x;
-                const angleY = data.value.y;
-                
-                // ⚙️ สั่งขยับโมเดล 3D บนหน้าจอตามมือคุณทันที! (แปลงองศาเป็น Radian)
-                gearMesh.rotation.x = angleX * (Math.PI / 180);
-                gearMesh.rotation.y = angleY * (Math.PI / 180);
+            if (data.type === "twin_rotate" && currentMesh) {
+                // ขยับหมุนวัตถุตามพิกัด 3D ที่ส่งมาจาก Python
+                currentMesh.rotation.x = data.value.x * (Math.PI / 180);
+                currentMesh.rotation.y = data.value.y * (Math.PI / 180);
             }
         };
 
         socket.onclose = () => {
-            statusDiv.innerText = "🔴 การเชื่อมต่อตัดขาด (Python ปิดอยู่)";
-            statusDiv.style.color = "#f87171";
-            connectBtn.style.background = "#4f46e5";
-            connectBtn.innerText = "🔌 เชื่อมต่อสมองกล Digital Twin";
+            statusText.innerText = "🔴 การเชื่อมต่อตัดขาด (กรุณารัน Python ค้างไว้)";
+            statusText.style.color = "#f87171";
+            connectBtn.classList.remove('connected');
+            connectBtn.innerText = "🔌 เชื่อมต่อสมองกล (Digital Twin)";
         };
     });
-
-    // ปรับขนาดหน้าจอ 3D ตามหน้าต่างอัตโนมัติ
-    window.addEventListener('resize', () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
-    });
 </script>
-
 </body>
 </html>
